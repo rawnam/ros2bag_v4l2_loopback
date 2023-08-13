@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ros2bag_v4l2_loopback</name>
+  <version>0.0.1</version>
+  <description>A ROS 2 package to read images from a bag and publish them over a v4l2 loopback device</description>
+  <maintainer email="you@example.com">Your Name</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Dependencies for the project -->
+  <depend>rclcpp</depend>
+  <depend>rosbag2_cpp</depend>
+  <depend>rosbag2_compression</depend>
+  <depend>rosbag2_storage</depend>
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
