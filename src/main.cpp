@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
     vid_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
     vid_format.fmt.pix.width = VID_WIDTH;
     vid_format.fmt.pix.height = VID_HEIGHT;
-    vid_format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV; // TODO: What is this encoding? 
+    vid_format.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24; 
     vid_format.fmt.pix.sizeimage = VID_WIDTH * VID_HEIGHT * 3;
     vid_format.fmt.pix.field = V4L2_FIELD_NONE;
 
