@@ -9,6 +9,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/serialization.hpp"
 
+#include <chrono>
+
 #ifndef VID_WIDTH
 #define VID_WIDTH 1920
 #endif
@@ -49,7 +51,7 @@ int main(int argc, char* argv[]) {
     vid_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
     vid_format.fmt.pix.width = VID_WIDTH;
     vid_format.fmt.pix.height = VID_HEIGHT;
-    vid_format.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
+    vid_format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV; // TODO: What is this encoding? 
     vid_format.fmt.pix.sizeimage = VID_WIDTH * VID_HEIGHT * 3;
     vid_format.fmt.pix.field = V4L2_FIELD_NONE;
 
@@ -62,6 +64,13 @@ int main(int argc, char* argv[]) {
     const char* gui = "gui";
     cv::namedWindow(gui);
     cv::setWindowTitle(gui, "ROS2 Bag to V4L2");
+    
+    
+    // To calculate FPS
+    size_t frame_count = 0;
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    std::chrono::nanoseconds last_timestamp = std::chrono::nanoseconds(0);
 
     while (reader.has_next()) {
         auto serialized_msg = reader.read_next();
@@ -76,12 +85,21 @@ int main(int argc, char* argv[]) {
         serializer.deserialize_message(&rclcpp_serialized_msg, image_msg.get());
 
         if (image_msg) {
+            // Calculate delay based on timestamp difference
+            std::chrono::nanoseconds current_timestamp(image_msg->header.stamp.nanosec);
+            if (last_timestamp.count() > 0) {
+                std::chrono::duration<double> delay = std::chrono::duration_cast<std::chrono::duration<double>>(current_timestamp - last_timestamp);
+                std::this_thread::sleep_for(delay);
+            }
+            last_timestamp = current_timestamp;
+
             cv_bridge::CvImagePtr cv_ptr;
             try {
-                cv_ptr = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
+                cv_ptr = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::YUV422_YUY2);
 
-                // Convert the BGR image to RGB since we're writing in RGB24 format
-                cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_BGR2RGB);
+                // Convert the YUV422_YUY2 image to RGB since we're writing in RGB24 format
+                cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_YUV2BGR_YUY2); // Why is BGR working? Without this conversion, there is a memory allocation error
+                // cv::cvtColor(cv_ptr->image, cv_ptr->image, cv::COLOR_BGR2RGBA);
 
                 // show frame
                 cv::imshow(gui, cv_ptr->image);
@@ -101,6 +119,15 @@ int main(int argc, char* argv[]) {
             } catch (cv_bridge::Exception& e) {
                 std::cerr << "cv_bridge exception: " << e.what() << std::endl;
                 return 1;
+            }
+                    // Increment frame counter
+            frame_count++;
+
+            // Calculate and display FPS
+            auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start_time);
+            if (elapsed_time.count() > 0) {
+                double fps = static_cast<double>(frame_count) / elapsed_time.count();
+                std::cout << "Average FPS: " << fps << "\r";  // \r to overwrite line with new FPS value
             }
         }
     }
